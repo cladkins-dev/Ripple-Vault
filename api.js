@@ -1,6 +1,17 @@
 var express = require("express");
 var app = express();
 
+
+//Toggle Debug On.
+const debugOn=true;
+
+//Debug Function
+global.debug=function(...args){
+	if(debugOn){
+		console.log("DEBUG:",args);
+	}
+}
+
 const { XRP_Model } = require("./models/xrp-model.js");
 const { Vault } = require("./vault.js");
 const { FakeData } = require("./fake-data.js");
@@ -24,16 +35,16 @@ const CURRENCIES={
 	})
 };
 
-
 //Create a new Vault
 const vault = new Vault(CURRENCIES);
 
 
 
 
+
 //Main API Server
 app.listen(3000, () => {
-	console.log("Server running on port 3000");
+	debug("Server running on port 3000");
 	vault.watchXRP();
 });
 
@@ -47,7 +58,7 @@ app.get('/accounts',(req,res,next) => {
 
 
 //Get Deposit Address
-app.get('/depositUser/:currency/address', (req, res, next) => {
+app.get('/receiveUser/:currency/address', (req, res, next) => {
 
  	//Get Random Account and Deposit Address
  	var account=APP_ACCOUNTS[Math.floor(0 + Math.random() * APP_ACCOUNTS.length)];
@@ -72,7 +83,7 @@ app.get('/depositUser/:currency/address', (req, res, next) => {
 
 
 //Get Deposit Address
-app.get('/deposit/:currency/', (req, res, next) => {
+app.get('/receiveServer/:currency/', (req, res, next) => {
 
 	if(req.params.currency=="xrp"){
 		res.json(
@@ -92,8 +103,8 @@ app.get('/deposit/:currency/', (req, res, next) => {
 
 
 
-//Get Deposit Address
-app.get('/send/:currency/:address/:meta/:amount', (req, res, next) => {
+//Send Payment to Address
+app.get('/sendPayment/:currency/:address/:meta/:amount', (req, res, next) => {
 	var currency=CURRENCIES[req.params.currency];
 
 	if(req.params.currency=="xrp"){
@@ -105,7 +116,7 @@ app.get('/send/:currency/:address/:meta/:amount', (req, res, next) => {
 		};
 
 
-		console.log("Creating Withdraw: ",payment);
+		debug("Creating Transaction Details: ",payment);
 
 
 		vault.sendPayment(currency,payment,function(ret){
@@ -113,7 +124,7 @@ app.get('/send/:currency/:address/:meta/:amount', (req, res, next) => {
 				var hash=ret.resource.tx_json.hash;
 				var tag=ret.resource.tx_json.DestinationTag;
 				var amount=ret.resource.tx_json.Amount;
-				console.log(`Outgoing Transaction: \n tx:${hash} / tag:${tag} / amount:${amount/1000000 } XRP`);
+				debug(`Outgoing Transaction: \n tx:${hash} / tag:${tag} / amount:${amount/1000000 } XRP`);
 
 				res.json({
 					[req.params.currency]:{

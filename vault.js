@@ -8,11 +8,12 @@ class Vault {
 
 
 
+
 	async sendPayment(currency,payment,callback){
 		var currency_symbol=currency.PARAMS.SYMBOL;
 
 
-		console.log("Selected Currency:", currency_symbol);
+		debug("Selected Currency:", currency_symbol);
 
 		if(currency_symbol=="XRP"){
 
@@ -22,7 +23,7 @@ class Vault {
 
 
 		}else{
-			console.log("Currency not Supported...");
+			debug("Currency not Supported...");
 		}
 
 
@@ -39,7 +40,7 @@ class Vault {
 			sendTo:"r4z5yejJMyGfjeehnrZQhb28p4fjmPLf9",
 			sendToTag:121432567
 		},function(res){
-			console.log(res);
+			debug(res);
 		}).catch(error => console.error(error.stack));
 
 
@@ -50,18 +51,18 @@ class Vault {
 
 		currency.run(
 			function(API){
-				console.log("Connected...");
-				console.log("Subscribing to Address...");
+				debug("Connected...");
+				debug("Subscribing to Address...");
 
 				currency.watchAddress(
 					"r4z5yejJMyGfjeehnrZQhb28p4fjmPLf9",
 					function(method,e){
-						console.log('subscribe', method,e)
+						debug('subscribe', method,e)
 					});
 
 
 			},function(API,event){
-				console.log("Disconnected...",event);
+				debug("Disconnected...",event);
 			},
 			function(errorCode,errorMessage){
 
@@ -69,7 +70,7 @@ class Vault {
 				var hash=transaction.transaction.hash;
 				var tag=transaction.transaction.DestinationTag;
 				var amount=transaction.transaction.Amount;
-				console.log(`Incoming Transaction: \n tx:${hash} / tag:${tag} / amount:${amount/1000000 } XRP`);
+				debug(`Incoming Transaction: \n tx:${hash} / tag:${tag} / amount:${amount/1000000 } XRP`);
 			});
 	}
 

@@ -5,8 +5,8 @@ class XRP_Model{
 	PARAMS={
 		ADDRESS: "",
 		TAG: 123456789,
-		SECRET_KEY:"",
-		SYMBOL:"XRP"
+		SECRET_KEY: "",
+		SYMBOL: "XRP"
 	};
 
 	API=null;
@@ -22,7 +22,7 @@ class XRP_Model{
 		this.PARAMS.TAG=params.TAG;
 		this.PARAMS.SECRET_KEY=params.SECRET_KEY;
 		this.SERVERS=server.servers;
-		console.log(this.SERVERS);
+		debug(this.SERVERS);
 
 		this.API=new RippleAPI({
 			server: this.SERVERS[0]
@@ -89,7 +89,7 @@ class XRP_Model{
 		this.API.request('subscribe', {
 			accounts: [ addresses ]
 		}).then(response => {
-			console.log('Successfully subscribed');
+			debug('Successfully subscribed');
 			callback('response',response);
 		}).catch(error => {
 			callback('error',error);
