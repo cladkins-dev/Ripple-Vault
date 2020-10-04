@@ -29,5 +29,5 @@ encryptionObj.writeEncryptionFile("keyfile.txt",function(err){
 });
 
 encryptionObj.readEncryptionFile("keyfile.txt",function(err){
-	console.log("Read File: ");
+	console.log("Read File... ");
 });
