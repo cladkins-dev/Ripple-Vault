@@ -165,10 +165,6 @@ app.get('/sendPayment/:currency/:address/:meta/:amount', (req, res, next) => {
 //Send Payment to Address
 app.get('/schedulePayment/:currency/:address/:meta/:amount/:time', (req, res, next) => {
 	var currency=CURRENCIES[req.params.currency];
-	//var time=timeObj.randomTime('10-04-2020 15:50','10-04-2020 16:10');
-	//var releaseTime=time.getTime().toString().slice(0, -3);
-	//var releaseTime = new Date(parseInt(req.params.time) * 1000);
-
 	var rawTimeStamp=parseInt(req.params.time);
 	var releaseTime=new Date(rawTimeStamp* 1000);
 
@@ -177,9 +173,10 @@ app.get('/schedulePayment/:currency/:address/:meta/:amount/:time', (req, res, ne
 	debug("Scheduling Funds For Release On: ",releaseTime.toLocaleDateString('en-US')+" "+releaseTime.toLocaleTimeString().replace(/:\d+ /, ' '));
 
 
-	if(req.params.currency=="xrp"){
+	if(req.params.currency.toUpperCase()=="XRP"){
 
 		const payment={
+			currency: currency.PARAMS.SYMBOL,
 			uuid: encryptionObj.generateUUID(),
 			amount: req.params.amount,
 			sendTo: req.params.address,
@@ -212,4 +209,86 @@ app.get('/schedulePayment/:currency/:address/:meta/:amount/:time', (req, res, ne
 
 
 });
+
+
+
+app.get('/scheduledPayments/:currency', (req, res, next) => {
+	var currency=CURRENCIES[req.params.currency];
+
+
+	if(req.params.currency.toUpperCase()=="XRP"){
+		var resultArray=Array();
+		var payments=vault.getScheduledPayments();
+		if(payments.length>0){
+			payments.forEach(function(item){
+				if(item.currency.PARAMS.SYMBOL==="XRP"){
+					resultArray.push(item.payment);
+				}
+			})
+			res.json(resultArray);
+		}else{
+			res.json(["No Scheduled Payments Found"]); 
+		}
+		
+	}
+
+
+});
+
+
+//Send Payment to Address
+app.get('/scheduleRandomPayments/:currency/:address/:meta/:amount', (req, res, next) => {
+	var currency=CURRENCIES[req.params.currency];
+
+	for(var i=0;i<10;i++){
+		var releaseTime=timeObj.randomTime('10-05-2020 2:20','10-05-2020 5:00');
+		var rawTimeStamp=parseInt(timeObj.epoch(releaseTime).toString())/1000;
+		debug("Random Time:",releaseTime);
+		debug("Raw Timestamp",rawTimeStamp);
+
+
+
+		debug("Scheduling Funds For Release On: ",releaseTime.toLocaleDateString('en-US')+" "+releaseTime.toLocaleTimeString().replace(/:\d+ /, ' '));
+
+
+		if(req.params.currency.toUpperCase()=="XRP"){
+
+			const payment={
+				currency: currency.PARAMS.SYMBOL,
+				uuid: encryptionObj.generateUUID(),
+				amount: req.params.amount,
+				sendTo: req.params.address,
+				sendToTag: parseInt(req.params.meta),
+				releaseTime: rawTimeStamp
+			};
+
+
+			debug("Creating Transaction Details: ", payment);
+
+
+			vault.schedulePayment(currency,payment,function(ret){
+				if(ret.resource.resultCode.indexOf('SUCCESS')){
+					var hash=ret.resource.tx_json.hash;
+					var tag=ret.resource.tx_json.DestinationTag;
+					var amount=ret.resource.tx_json.Amount;
+					debug(`Outgoing Transaction: \n tx:${hash} / tag:${tag} / amount:${amount/1000000 } XRP`);
+
+				}
+
+
+
+			},rawTimeStamp).catch(error => console.error(error.stack));
+
+
+		}else{
+			res.json(["currency not found..."]); 	
+		}
+
+
+	}
+		res.json(["Payments Scheduled"]);
+
+
+});
+
 

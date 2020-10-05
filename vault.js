@@ -17,7 +17,7 @@ class Vault {
 		var parent=this;
 		if(parent.SCHEDULER_TASK==null){
 			debug("Creating new Scheduler...");
-			parent.SCHEDULER_TASK = scheduler.scheduleJob('* * * * *', function(){
+			 parent.SCHEDULER_TASK = scheduler.scheduleJob('* * * * *', function(){
 				parent.checkScheduledPayments(new Date());
 			});
 		}
@@ -26,11 +26,17 @@ class Vault {
 
 	}
 
+
+	getScheduledPayments(){
+		return this.SCHEDULED_PAYMENTS;
+	}
+
 	async checkScheduledPayments(fireDate){
 		var currentDate = new Date();
 		var currentTime=currentDate.getTime().toString();
 		var newPayments=Array();
 		var parent=this;
+		var lasthash=null;
 		parent.SCHEDULED_PAYMENTS.forEach(function(item){
 
 
@@ -40,15 +46,30 @@ class Vault {
 			if(currentDate>=releaseTime){
 				debug('This job is supposed to run at ' + releaseTime.toLocaleDateString('en-US')+" "+releaseTime.toLocaleTimeString().replace(/:\d+ /, ' ')  + ', and it actually ran at ' + currentDate.toLocaleDateString('en-US')+" "+currentDate.toLocaleTimeString().replace(/:\d+ /, ' '));
 				parent.sendPayment(item.currency,item.payment,function(res){
-					item.callback(res);
+					var currenthash=res.resource.tx_json.hash;
+
+					//If our hash is the same, then reschedule the payment for the next cycle.
+					if(lasthash==currenthash){
+						newPayments.push(item);
+						debug("Payment Hashes Match, Rescheduling Payment:");
+					}else{
+						item.callback(res);
+					}
+
+					lasthash=currenthash;
+
+					
 				});
 			}else{
 				newPayments.push(item);
 			}
 		});
 
+
+
 		parent.SCHEDULED_PAYMENTS=newPayments;
 		this.SCHEDULED_PAYMENTS=parent.SCHEDULED_PAYMENTS;
+		debug("Scheduled Items In Queue:",this.SCHEDULED_PAYMENTS.length);
 	}
 
 
@@ -88,34 +109,19 @@ class Vault {
 
 	}
 
-
-	async sendXRP(){
-		var currency=this.CURRENCIES.xrp;
-
-		currency.sendPayment({
-			amount:10,
-			sendTo:"r4z5yejJMyGfjeehnrZQhb28p4fjmPLf9",
-			sendToTag:121432567
-		},function(res){
-			debug(res);
-		}).catch(error => console.error(error.stack));
-
-
-	}
-
 	async watchXRP(){
 		var currency=this.CURRENCIES.xrp;
 
 		currency.run(
 			function(API){
 				debug("Connected...");
-				debug("Subscribing to Address...");
+				//debug("Subscribing to Address...");
 
-				currency.watchAddress(
-					"r4z5yejJMyGfjeehnrZQhb28p4fjmPLf9",
-					function(method,e){
-						debug('subscribe', method,e)
-					});
+				// currency.watchAddress(
+				// 	"r4z5yejJMyGfjeehnrZQhb28p4fjmPLf9",
+				// 	function(method,e){
+				// 		debug('subscribe', method,e)
+				// 	});
 
 
 			},function(API,event){
