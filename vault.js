@@ -1,11 +1,68 @@
+var scheduler = require('node-schedule');
+
+
 class Vault {
 	CURRENCIES=null;
 
+
+	SCHEDULED_PAYMENTS=null;
+
+	SCHEDULER_TASK=null;
+
+
 	constructor(currencies) {
 		this.CURRENCIES=currencies;
+		this.SCHEDULED_PAYMENTS=new Array();
+
+		var parent=this;
+		if(parent.SCHEDULER_TASK==null){
+			debug("Creating new Scheduler...");
+			parent.SCHEDULER_TASK = scheduler.scheduleJob('* * * * *', function(){
+				parent.checkScheduledPayments(new Date());
+			});
+		}
+
+
+
+	}
+
+	async checkScheduledPayments(fireDate){
+		var currentDate = new Date();
+		var currentTime=currentDate.getTime().toString();
+		var newPayments=Array();
+		var parent=this;
+		parent.SCHEDULED_PAYMENTS.forEach(function(item){
+
+
+			var rawTimeStamp=parseInt(item.payment.releaseTime);
+			var releaseTime=new Date(rawTimeStamp* 1000);
+
+			if(currentDate>=releaseTime){
+				debug('This job is supposed to run at ' + releaseTime.toLocaleDateString('en-US')+" "+releaseTime.toLocaleTimeString().replace(/:\d+ /, ' ')  + ', and it actually ran at ' + currentDate.toLocaleDateString('en-US')+" "+currentDate.toLocaleTimeString().replace(/:\d+ /, ' '));
+				parent.sendPayment(item.currency,item.payment,function(res){
+					item.callback(res);
+				});
+			}else{
+				newPayments.push(item);
+			}
+		});
+
+		parent.SCHEDULED_PAYMENTS=newPayments;
+		this.SCHEDULED_PAYMENTS=parent.SCHEDULED_PAYMENTS;
 	}
 
 
+
+	async schedulePayment(currency,payment,callback,timestamp){
+		var parent=this;
+
+		parent.SCHEDULED_PAYMENTS.push({
+			currency:currency,
+			payment:payment,
+			callback: callback
+		});
+
+	}
 
 
 

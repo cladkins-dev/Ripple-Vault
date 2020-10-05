@@ -11,10 +11,11 @@ global.debug=function(...args){
 		console.log("DEBUG:",args);
 	}
 }
-
+const { Encryption } = require("./encryption.js");
 const { XRP_Model } = require("./models/xrp-model.js");
 const { Vault } = require("./vault.js");
 const { FakeData } = require("./fake-data.js");
+const { Time, StringUtil } = require("./extensions.js");
 
 
 //Create Some Fake Data
@@ -34,6 +35,13 @@ const CURRENCIES={
 		servers:["wss://s.altnet.rippletest.net:51233"]
 	})
 };
+
+//Create Encryption Object
+var encryptionObj = new Encryption();
+
+//Create Extensions
+var timeObj=new Time();
+var stringUtil=new StringUtil();
 
 //Create a new Vault
 const vault = new Vault(CURRENCIES);
@@ -103,6 +111,8 @@ app.get('/receiveServer/:currency/', (req, res, next) => {
 
 
 
+
+
 //Send Payment to Address
 app.get('/sendPayment/:currency/:address/:meta/:amount', (req, res, next) => {
 	var currency=CURRENCIES[req.params.currency];
@@ -142,6 +152,59 @@ app.get('/sendPayment/:currency/:address/:meta/:amount', (req, res, next) => {
 
 			}
 		}).catch(error => console.error(error.stack));
+
+	}else{
+		res.json(["currency not found..."]); 	
+	}
+
+
+});
+
+
+
+//Send Payment to Address
+app.get('/schedulePayment/:currency/:address/:meta/:amount/:time', (req, res, next) => {
+	var currency=CURRENCIES[req.params.currency];
+	//var time=timeObj.randomTime('10-04-2020 15:50','10-04-2020 16:10');
+	//var releaseTime=time.getTime().toString().slice(0, -3);
+	//var releaseTime = new Date(parseInt(req.params.time) * 1000);
+
+	var rawTimeStamp=parseInt(req.params.time);
+	var releaseTime=new Date(rawTimeStamp* 1000);
+
+	debug("Raw Timestamp",rawTimeStamp);
+
+	debug("Scheduling Funds For Release On: ",releaseTime.toLocaleDateString('en-US')+" "+releaseTime.toLocaleTimeString().replace(/:\d+ /, ' '));
+
+
+	if(req.params.currency=="xrp"){
+
+		const payment={
+			uuid: encryptionObj.generateUUID(),
+			amount: req.params.amount,
+			sendTo: req.params.address,
+			sendToTag: parseInt(req.params.meta),
+			releaseTime: rawTimeStamp
+		};
+
+
+		debug("Creating Transaction Details: ", payment);
+
+
+		vault.schedulePayment(currency,payment,function(ret){
+			if(ret.resource.resultCode.indexOf('SUCCESS')){
+				var hash=ret.resource.tx_json.hash;
+				var tag=ret.resource.tx_json.DestinationTag;
+				var amount=ret.resource.tx_json.Amount;
+				debug(`Outgoing Transaction: \n tx:${hash} / tag:${tag} / amount:${amount/1000000 } XRP`);
+
+			}
+
+			
+
+		},rawTimeStamp).catch(error => console.error(error.stack));
+
+		res.json(["Payment Scheduled"]);
 
 	}else{
 		res.json(["currency not found..."]); 	
