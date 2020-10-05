@@ -37,6 +37,7 @@ class Vault {
 		var newPayments=Array();
 		var parent=this;
 		var lasthash=null;
+		var lastPayment=null;
 		parent.SCHEDULED_PAYMENTS.forEach(function(item){
 
 
@@ -47,9 +48,11 @@ class Vault {
 				debug('This job is supposed to run at ' + releaseTime.toLocaleDateString('en-US')+" "+releaseTime.toLocaleTimeString().replace(/:\d+ /, ' ')  + ', and it actually ran at ' + currentDate.toLocaleDateString('en-US')+" "+currentDate.toLocaleTimeString().replace(/:\d+ /, ' '));
 				parent.sendPayment(item.currency,item.payment,function(res){
 					var currenthash=res.resource.tx_json.hash;
-
+		
 					//If our hash is the same, then reschedule the payment for the next cycle.
 					if(lasthash==currenthash){
+						debug(lastPayment.payment.uuid,item.payment.uuid);
+						debug(lasthash,currenthash);
 						newPayments.push(item);
 						debug("Payment Hashes Match, Rescheduling Payment:");
 					}else{
@@ -57,6 +60,7 @@ class Vault {
 					}
 
 					lasthash=currenthash;
+					lastPayment=item;
 
 					
 				});
