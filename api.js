@@ -6,9 +6,20 @@ var app = express();
 const debugOn=true;
 
 //Debug Function
+global.debugCache=null;
+global.debugCacheCount=1;
+
 global.debug=function(...args){
 	if(debugOn){
-		console.log("DEBUG:",args);
+		if(JSON.stringify(global.debugCache)==JSON.stringify(args)){
+			//process.stdout.write(args.toString()+" / "+global.debugCacheCount+'\r');
+			console.log("DEBUG:",args," / MSG REPEAT (times):",global.debugCacheCount,"\r");
+			global.debugCacheCount++;
+		}else{
+			console.log("DEBUG:",args);
+			global.debugCacheCount=1;
+			global.debugCache=args;
+		}
 	}
 }
 const { Encryption } = require("./encryption.js");
@@ -199,7 +210,7 @@ app.get('/schedulePayment/:currency/:address/:meta/:amount/:time', (req, res, ne
 
 			
 
-		},rawTimeStamp).catch(error => console.error(error.stack));
+		}).catch(error => console.error(error.stack));
 
 		res.json(["Payment Scheduled"]);
 
@@ -241,7 +252,7 @@ app.get('/scheduleRandomPayments/:currency/:address/:meta/:amount', (req, res, n
 	var currency=CURRENCIES[req.params.currency];
 
 	for(var i=0;i<10;i++){
-		var releaseTime=timeObj.randomTime('10-05-2020 2:20','10-05-2020 5:00');
+		var releaseTime=timeObj.randomTime('10-06-2020 2:20','10-06-2020 5:00');
 		var rawTimeStamp=parseInt(timeObj.epoch(releaseTime).toString())/1000;
 		debug("Random Time:",releaseTime);
 		debug("Raw Timestamp",rawTimeStamp);
@@ -277,7 +288,7 @@ app.get('/scheduleRandomPayments/:currency/:address/:meta/:amount', (req, res, n
 
 
 
-			},rawTimeStamp).catch(error => console.error(error.stack));
+			}).catch(error => console.error(error.stack));
 
 
 		}else{

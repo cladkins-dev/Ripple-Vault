@@ -64,20 +64,30 @@ class XRP_Model{
 
 
 	// Get ready to submit the payment
-	const prepared = await this.API.preparePayment(RIPPLE_FROM_ADDRESS, payment, {
+	this.API.preparePayment(RIPPLE_FROM_ADDRESS, payment, {
 		maxLedgerVersionOffset: 5
-	});
+	}).then(prepared=>{
+
   	// Sign the payment using the sender's secret
-  	const { signedTransaction } = this.API.sign(prepared.txJSON, RIPPLE_FROM_SECRET);
+  	const { signedTransaction, id } = this.API.sign(prepared.txJSON, RIPPLE_FROM_SECRET);
+ 	 	// Submit the payment
 
- 	// Submit the payment
- 	const res = await this.API.submit(signedTransaction);
+ 	 	this.API.submit(signedTransaction).then(result=>{
+ 	 		//debug(signedTransaction,id);
 
- 	var data={resource:res,transaction:signedTransaction};
+ 	 		var data={
+ 	 			resource: result,
+ 	 			transaction: signedTransaction
+ 	 		};
 
- 	callback(data);
+ 	 		callback(data);
 
- }
+ 	 	});
+
+ 	 });
+
+
+}
 
 	//Receive XRP / Get Address/Tag Info.
 	receivePayment(callback){

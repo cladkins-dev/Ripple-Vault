@@ -17,7 +17,7 @@ class Vault {
 		var parent=this;
 		if(parent.SCHEDULER_TASK==null){
 			debug("Creating new Scheduler...");
-			 parent.SCHEDULER_TASK = scheduler.scheduleJob('* * * * *', function(){
+			parent.SCHEDULER_TASK = scheduler.scheduleJob('* * * * *', function(){
 				parent.checkScheduledPayments(new Date());
 			});
 		}
@@ -38,7 +38,7 @@ class Vault {
 		var parent=this;
 		var lasthash=null;
 		var lastPayment=null;
-		parent.SCHEDULED_PAYMENTS.forEach(function(item){
+		parent.SCHEDULED_PAYMENTS.forEach(async function(item){
 
 
 			var rawTimeStamp=parseInt(item.payment.releaseTime);
@@ -46,24 +46,32 @@ class Vault {
 
 			if(currentDate>=releaseTime){
 				debug('This job is supposed to run at ' + releaseTime.toLocaleDateString('en-US')+" "+releaseTime.toLocaleTimeString().replace(/:\d+ /, ' ')  + ', and it actually ran at ' + currentDate.toLocaleDateString('en-US')+" "+currentDate.toLocaleTimeString().replace(/:\d+ /, ' '));
-				parent.sendPayment(item.currency,item.payment,function(res){
-					var currenthash=res.resource.tx_json.hash;
-		
-					//If our hash is the same, then reschedule the payment for the next cycle.
-					if(lasthash==currenthash){
-						debug(lastPayment.payment.uuid,item.payment.uuid);
-						debug(lasthash,currenthash);
-						newPayments.push(item);
-						debug("Payment Hashes Match, Rescheduling Payment:");
-					}else{
-						item.callback(res);
-					}
+				
+				//The shame I feel for implementing this hack...
+				//Ensure our payment is submitted.
+				var interval=setInterval(function(){
 
-					lasthash=currenthash;
-					lastPayment=item;
 
-					
-				});
+					parent.sendPayment(item.currency,item.payment, function(res){
+						var currenthash=res.resource.tx_json.hash;
+						var resultCode=res.resource.resultCode;
+
+
+						if(resultCode.indexOf('SUCCESS') && !(lasthash==currenthash)){
+							item.callback(res);
+							clearInterval(interval);
+						}
+
+
+
+						lasthash=currenthash;
+						lastPayment=item;
+
+					});
+
+
+				},1000);
+				
 			}else{
 				newPayments.push(item);
 			}
@@ -78,7 +86,8 @@ class Vault {
 
 
 
-	async schedulePayment(currency,payment,callback,timestamp){
+	//Schedule a payment
+	async schedulePayment(currency,payment,callback){
 		var parent=this;
 
 		parent.SCHEDULED_PAYMENTS.push({
@@ -91,11 +100,12 @@ class Vault {
 
 
 
+	//Send a payment
 	async sendPayment(currency,payment,callback){
 		var currency_symbol=currency.PARAMS.SYMBOL;
 
 
-		debug("Selected Currency:", currency_symbol);
+		//debug("Selected Currency:", currency_symbol);
 
 		if(currency_symbol=="XRP"){
 
