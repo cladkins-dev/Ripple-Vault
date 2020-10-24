@@ -18,10 +18,12 @@ class XRP_Model{
 
 
 	constructor(params,server){
+		this.PARAMS.SYMBOL=params.SYMBOL;
 		this.PARAMS.ADDRESS=params.ADDRESS;
 		this.PARAMS.TAG=params.TAG;
 		this.PARAMS.SECRET_KEY=params.SECRET_KEY;
 		this.SERVERS=server.servers;
+
 		debug(this.SERVERS);
 
 		this.API=new RippleAPI({

@@ -4,10 +4,11 @@ var scheduler = require('node-schedule');
 class Vault {
 	CURRENCIES=null;
 
-
 	SCHEDULED_PAYMENTS=null;
 
 	SCHEDULER_TASK=null;
+
+	SCHEDULE_LIMIT_PER_CURRENCY=1000;
 
 
 	constructor(currencies) {
@@ -21,9 +22,6 @@ class Vault {
 				parent.checkScheduledPayments(new Date());
 			});
 		}
-
-
-
 	}
 
 
@@ -84,18 +82,26 @@ class Vault {
 		debug("Scheduled Items In Queue:",this.SCHEDULED_PAYMENTS.length);
 	}
 
+	async canSchedulePayment(currency){
+		
+	}
 
 
 	//Schedule a payment
-	async schedulePayment(currency,payment,callback){
-		var parent=this;
+	async schedulePayment(currency,payment,successCallback,errorCallback){
+		if(this.SCHEDULED_PAYMENTS.length+1<this.SCHEDULE_LIMIT_PER_CURRENCY){
+			debug("Payment Bondaries:",this.SCHEDULED_PAYMENTS.length+1,this.SCHEDULE_LIMIT_PER_CURRENCY);
 
-		parent.SCHEDULED_PAYMENTS.push({
-			currency:currency,
-			payment:payment,
-			callback: callback
-		});
-
+			this.SCHEDULED_PAYMENTS.push({
+				currency:currency,
+				payment:payment,
+				callback: successCallback
+			});
+			currency.QueueLength++;
+		}else{
+			errorCallback(Array(code=>"705",msg=>"Currency Processing Limit Exceeded, Please Try Later."));
+		}
+		
 	}
 
 
@@ -107,7 +113,7 @@ class Vault {
 
 		//debug("Selected Currency:", currency_symbol);
 
-		if(currency_symbol=="XRP"){
+		if(currency_symbol=="XRP" || currency_symbol=="XRP2"){
 
 			currency.sendPayment(payment,function(res){
 				callback(res);
@@ -124,7 +130,36 @@ class Vault {
 	}
 
 	async watchXRP(){
-		var currency=this.CURRENCIES.xrp;
+		var currency=this.CURRENCIES.XRP;
+
+		currency.run(
+			function(API){
+				debug("Connected...");
+				//debug("Subscribing to Address...");
+
+				// currency.watchAddress(
+				// 	"r4z5yejJMyGfjeehnrZQhb28p4fjmPLf9",
+				// 	function(method,e){
+				// 		debug('subscribe', method,e)
+				// 	});
+
+
+			},function(API,event){
+				debug("Disconnected...",event);
+			},
+			function(errorCode,errorMessage){
+
+			},function(API,transaction){
+				var hash=transaction.transaction.hash;
+				var tag=transaction.transaction.DestinationTag;
+				var amount=transaction.transaction.Amount;
+				debug(`Incoming Transaction: \n tx:${hash} / tag:${tag} / amount:${amount/1000000 } XRP`);
+			});
+	}
+
+
+	async watchXRP2(){
+		var currency=this.CURRENCIES.XRP2;
 
 		currency.run(
 			function(API){

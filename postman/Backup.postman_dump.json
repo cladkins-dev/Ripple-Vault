@@ -1,0 +1,56 @@
+{
+	"version": 1,
+	"collections": [
+		{
+			"id": "69e68aff-27b6-470a-96c1-dc4e094c1b6b",
+			"name": "CryptoVault",
+			"description": null,
+			"auth": null,
+			"events": null,
+			"variables": [],
+			"order": [
+				"9d06a680-553f-42c5-b69a-df7f46a80cc0"
+			],
+			"folders_order": [],
+			"protocolProfileBehavior": {},
+			"folders": [],
+			"requests": [
+				{
+					"id": "9d06a680-553f-42c5-b69a-df7f46a80cc0",
+					"name": "CryptoVault-ScheduleRandomPayments",
+					"url": "http://localhost:3000/scheduleRandomPayments",
+					"description": "",
+					"data": [],
+					"dataOptions": {
+						"raw": {
+							"language": "json"
+						}
+					},
+					"dataMode": "raw",
+					"headerData": [],
+					"method": "POST",
+					"pathVariableData": [],
+					"queryParams": [],
+					"auth": null,
+					"events": [],
+					"folder": null,
+					"currentHelper": null,
+					"helperAttributes": null,
+					"collectionId": "69e68aff-27b6-470a-96c1-dc4e094c1b6b",
+					"rawModeData": "{\r\n    \"currency\": \"xrp\",\r\n    \"address\": \"rDbfN4KgwQ8jYW1pkwbQvi8NY8DL6DKNHu\",\r\n    \"meta\": \"123456789\",\r\n    \"amount\": \"4\"\r\n}",
+					"headers": "",
+					"pathVariables": {}
+				}
+			]
+		}
+	],
+	"environments": [
+		{
+			"id": "4537bb91-6b25-4181-916a-541d8877d069",
+			"name": "My Workspace - globals",
+			"values": []
+		}
+	],
+	"headerPresets": [],
+	"globals": []
+}
