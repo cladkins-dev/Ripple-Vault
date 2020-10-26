@@ -33,10 +33,12 @@ global.debug = function (...args) {
 }
 const { Encryption } = require("./encryption.js");
 const { XRP_Model } = require("./models/xrp-model.js");
+const { XLM_Model } = require("./models/xlm-model.js");
 const { Vault } = require("./vault.js");
 const { FakeData } = require("./fake-data.js");
 const { Time, StringUtil } = require("./extensions.js");
 const { debug } = require("console");
+const { exit } = require("process");
 
 
 //Create Some Fake Data
@@ -55,14 +57,14 @@ const CURRENCIES = {
 	},{
 		servers: ["wss://s.altnet.rippletest.net:51233"]
 	}),
-	XRP2: new XRP_Model({
-		SYMBOL: "XRP2",
-		FRIENDY_NAME: "HotWallet2",
-		ADDRESS: "rp3vV4TJnzqeDzh4Z5vMzTGCSi5sNEiLi2",
+	XLM: new XLM_Model({
+		SYMBOL: "XLM",
+		FRIENDY_NAME: "HotWallet1",
+		ADDRESS: "GAMV6LNFRUDZZZ65VQ7GJTKASUFX6S2HUONPE6PEABCXIB2F2Y5X3ATB",
 		TAG: 123456789,
-		SECRET_KEY: "shmrXktmbvPvuqk9JP3jAj6yiX946"
+		SECRET_KEY: "SDYJHLWUIONIWLXVYO2AVDT6QUNYXQX72DK2Q5JHT7XW5F433LGQMPDS"
 	},{
-		servers: ["wss://s.altnet.rippletest.net:51233"]
+		servers: ["https://horizon-testnet.stellar.org"]
 	})
 };
 
@@ -84,7 +86,6 @@ const vault = new Vault(CURRENCIES);
 app.listen(SERVER_PORT, () => {
 	debug("Server running on port:", SERVER_PORT);
 	vault.watchXRP();
-	vault.watchXRP2();
 });
 
 
@@ -148,7 +149,8 @@ app.post('/schedulePayment', (req, res, next) => {
 	var address = req.body.address;
 	var meta = req.body.address;
 	var amount = req.body.amount;
-	var rawTimeStamp = (parseInt(req.body.time))?parseInt(req.body.time):0;
+	var req_time=parseInt(req.body.time)
+	var rawTimeStamp = (!isNaN(req_time))?req_time:0;
 	var releaseTime = (rawTimeStamp>0)?new Date(rawTimeStamp * 1000):new Date();
 
 	//If we pass in no trans_count, we just do
@@ -198,9 +200,8 @@ app.post('/schedulePayment', (req, res, next) => {
 			debug("Raw Timestamp", newRawTimeStamp);
 			debug("Scheduling Funds For Release On: ", newReleaseTime.toLocaleDateString('en-US') + " " + newReleaseTime.toLocaleTimeString().replace(/:\d+ /, ' '));
 
-
 			//Match Currency Case
-			if ((currency_symbol == "XRP") || (currency_symbol == "XRP2")) {
+			if ((currency_symbol == "XRP") || (currency_symbol == "XLM")) {
 
 				//Create Payment
 				const payment = {
@@ -214,19 +215,28 @@ app.post('/schedulePayment', (req, res, next) => {
 
 				debug("Creating Transaction Details: ", payment);
 
+
+				try {				  
+
 				//Schedule Payment
 				vault.schedulePayment(currency, payment, function (ret) {
-					if (ret.resource.resultCode.indexOf('SUCCESS')) {
+					debug("Ret",ret);
+					
+					if ((ret.resource.resultCode.indexOf('SUCCESS'))) {
 						var hash = ret.resource.tx_json.hash;
 						var tag = ret.resource.tx_json.DestinationTag;
 						var amount = ret.resource.tx_json.Amount;
-						debug(`Outgoing Transaction: \n tx:${hash} / tag:${tag} / amount:${amount / 1000000} XRP`);
+						debug(`Outgoing Transaction: \n tx:${hash} / tag:${tag} / amount:${amount / 1000000} ${currency_symbol}`);
 
 					}
 				},function(ret){
 					unprocessedPayments.push(payment);
 				}).catch(error => console.error(error.stack));
 
+
+			} catch (error) {
+				debug(error);
+			}
 
 			} else {
 				res.json(["currency not found..."]);

@@ -1,3 +1,4 @@
+const { debug } = require('console');
 var scheduler = require('node-schedule');
 
 
@@ -14,6 +15,13 @@ class Vault {
 	constructor(currencies) {
 		this.CURRENCIES=currencies;
 		this.SCHEDULED_PAYMENTS=new Array();
+
+
+		//Loading Supported Currencies
+		Object.values(currencies).forEach(element=> debug("Loading Currency: ",element.PARAMS.SYMBOL));
+
+
+
 
 		var parent=this;
 		if(parent.SCHEDULER_TASK==null){
@@ -37,7 +45,9 @@ class Vault {
 		var lasthash=null;
 		var lastPayment=null;
 		parent.SCHEDULED_PAYMENTS.forEach(async function(item){
-
+			var currenthash="";
+			var resultCode="";
+			
 
 			var rawTimeStamp=parseInt(item.payment.releaseTime);
 			var releaseTime=new Date(rawTimeStamp* 1000);
@@ -51,14 +61,38 @@ class Vault {
 
 
 					parent.sendPayment(item.currency,item.payment, function(res){
-						var currenthash=res.resource.tx_json.hash;
-						var resultCode=res.resource.resultCode;
+						if(res!=null){
+							if(res.resource!=null){
+								currenthash=res.resource.tx_json.hash;
+								resultCode=res.resource.resultCode;
+							}else{
+								
+								if(res.successful==true){
+									currenthash=res.hash;
+									resultCode='SUCCESS';
+									res.resource.resultCode=resultCode;
+									res.resource.tx_json.hash=currenthash;
+									debug(">>>>>",currenthash,resultCode);
+								}
+								
+	
+							}
+	
+	
+	
+							if(resultCode.indexOf('SUCCESS') && !(lasthash==currenthash)){
+								item.callback(res);
+								clearInterval(interval);
+							}
+						}else{
+							if(res==null){
+								var res;
+								res.resource.resultCode="";
+								res.resource.tx_json.hash="";
+							}
 
-
-						if(resultCode.indexOf('SUCCESS') && !(lasthash==currenthash)){
-							item.callback(res);
-							clearInterval(interval);
 						}
+						
 
 
 
@@ -90,7 +124,7 @@ class Vault {
 	//Schedule a payment
 	async schedulePayment(currency,payment,successCallback,errorCallback){
 		if(this.SCHEDULED_PAYMENTS.length+1<this.SCHEDULE_LIMIT_PER_CURRENCY){
-			debug("Payment Bondaries:",this.SCHEDULED_PAYMENTS.length+1,this.SCHEDULE_LIMIT_PER_CURRENCY);
+			debug("Payment Boundaries:",this.SCHEDULED_PAYMENTS.length+1,this.SCHEDULE_LIMIT_PER_CURRENCY);
 
 			this.SCHEDULED_PAYMENTS.push({
 				currency:currency,
@@ -113,12 +147,15 @@ class Vault {
 
 		//debug("Selected Currency:", currency_symbol);
 
-		if(currency_symbol=="XRP" || currency_symbol=="XRP2"){
-
-			currency.sendPayment(payment,function(res){
-				callback(res);
-			}).catch(error => console.error(error.stack));
-
+		if((currency_symbol=="XRP") || (currency_symbol=="XLM")){
+		
+			try{
+				currency.sendPayment(payment,function(res){
+					callback(res);
+				}).catch(error => console.error(error.stack));
+			} catch (error) {
+				debug(error);
+			}
 
 		}else{
 			debug("Currency not Supported...");
@@ -131,35 +168,6 @@ class Vault {
 
 	async watchXRP(){
 		var currency=this.CURRENCIES.XRP;
-
-		currency.run(
-			function(API){
-				debug("Connected...");
-				//debug("Subscribing to Address...");
-
-				// currency.watchAddress(
-				// 	"r4z5yejJMyGfjeehnrZQhb28p4fjmPLf9",
-				// 	function(method,e){
-				// 		debug('subscribe', method,e)
-				// 	});
-
-
-			},function(API,event){
-				debug("Disconnected...",event);
-			},
-			function(errorCode,errorMessage){
-
-			},function(API,transaction){
-				var hash=transaction.transaction.hash;
-				var tag=transaction.transaction.DestinationTag;
-				var amount=transaction.transaction.Amount;
-				debug(`Incoming Transaction: \n tx:${hash} / tag:${tag} / amount:${amount/1000000 } XRP`);
-			});
-	}
-
-
-	async watchXRP2(){
-		var currency=this.CURRENCIES.XRP2;
 
 		currency.run(
 			function(API){

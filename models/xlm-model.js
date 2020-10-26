@@ -1,4 +1,4 @@
-const { StellarAPI, Operation} = require('stellar-sdk');
+const { debug } = require('console');
 
 
 
@@ -23,14 +23,10 @@ class XLM_Model{
 		this.PARAMS.SYMBOL=params.SYMBOL;
 		this.PARAMS.ADDRESS=params.ADDRESS;
 		this.PARAMS.TAG=params.TAG;
-		this.PARAMS.SECRET_KEY=this.StellarAPI.Keypair.fromSecret(params.SECRET_KEY);
+		this.PARAMS.SECRET_KEY=params.SECRET_KEY;
 		this.SERVERS=server.servers;
 
 		debug(this.SERVERS);
-
-		this.API=new StellarAPI.Server(this.SERVERS[0]);
-		this.API.networkPassphrase=StellarAPI.Networks.TESTNET;
-
 	}
 
 
@@ -66,35 +62,42 @@ class XLM_Model{
 			}
 		};
 
+		const { Asset, Memo, StellarSdk, Operation, BASE_FEE, TransactionBuilder,  Keypair, NotFoundError, Server, Networks} = require('stellar-sdk');
 
-	
-		this.API.loadAccount(TO_ADDRESS)
+		var server = new Server(this.SERVERS[0]);
+		var sourceKeys = Keypair
+		  .fromSecret(FROM_SECRET);
+		var destinationId = TO_ADDRESS;
+		// Transaction will hold a built transaction we can resubmit if the result is unknown.
+		var transaction;
+
+		server.loadAccount(destinationId)
 		// If the account is not found, surface a nicer error message for logging.
 		.catch(function (error) {
-		  if (error instanceof StellarAPI.NotFoundError) {
+		  if (error instanceof NotFoundError) {
 			throw new Error('The destination account does not exist!');
 		  } else return error
 		})
 		// If there was no error, load up-to-date information on your account.
 		.then(function() {
-		  return server.loadAccount(this.PARAMS.SECRET_KEY.publicKey());
+		  return server.loadAccount(sourceKeys.publicKey());
 		})
-		.then(function(FROM_ADDRESS) {
+		.then(function(sourceAccount) {
 		  // Start building the transaction.
-		  transaction = new StellarAPI.TransactionBuilder(FROM_ADDRESS, {
-			fee: StellarAPI.BASE_FEE,
-			networkPassphrase: API.networkPassphrase
+		  transaction = new TransactionBuilder(sourceAccount, {
+			fee: BASE_FEE,
+			networkPassphrase: Networks.TESTNET
 		  })
-			.addOperation(StellarAPI.Operation.payment({
-			  destination: TO_ADDRESS,
+			.addOperation(Operation.payment({
+			  destination: destinationId,
 			  // Because Stellar allows transaction in many currencies, you must
 			  // specify the asset type. The special "native" asset represents Lumens.
-			  asset: StellarAPI.Asset.native(),
+			  asset: Asset.native(),
 			  amount: amount
 			}))
 			// A memo allows you to add your own metadata to a transaction. It's
 			// optional and does not affect how Stellar treats the transaction.
-			.addMemo(StellarAPI.Memo.text('Test Transaction'))
+			.addMemo(Memo.text(""+TO_ADDRESS_TAG))
 			// Wait a maximum of three minutes for the transaction
 			.setTimeout(180)
 			.build();
@@ -104,15 +107,19 @@ class XLM_Model{
 		  return server.submitTransaction(transaction);
 		})
 		.then(function(result) {
-		  console.log('Success! Results:', result);
-		  callback(data);
+		  //console.log('Success! Results:', result);
+		  callback(result);
 		})
 		.catch(function(error) {
-		  console.error('Something went wrong!', error);
+			callback(error);
+		  //console.error('Something went wrong!', error);
 		  // If the result is unknown (no response body, timeout etc.) we simply resubmit
 		  // already built transaction:
 		  // server.submitTransaction(transaction);
 		});
+
+
+
 
 	}
 
@@ -161,4 +168,4 @@ class XLM_Model{
 
 
 }
-module.exports = {XRP_Model};
+module.exports = {XLM_Model};
